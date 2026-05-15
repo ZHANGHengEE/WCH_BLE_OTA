@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CH32 BLE OTA Web Updater</title>
+  <link rel="icon" href="designer_zh_logo.jpg" type="image/jpeg" />
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --soft: #f8fafc;
+      --soft-blue: #eef5ff;
+      --border: #dbe4f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --primary: #315cff;
+      --primary-2: #2247d8;
+      --success: #059669;
+      --success-bg: #ecfdf5;
+      --warn: #f97316;
+      --warn-bg: #fff7ed;
+      --danger: #dc2626;
+      --danger-bg: #fef2f2;
+      --shadow: 0 2px 12px rgba(15, 23, 42, 0.08);
+      --radius: 18px;
+      --radius-sm: 12px;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --font: "Segoe UI", Arial, "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+    }
+    button, input, select { font: inherit; }
+    .app { max-width: 1280px; margin: 0 auto; padding: 10px; }
+    .topbar {
+      min-height: 68px;
+      background: #050a1e;
+      border-radius: 18px;
+      color: white;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 12px 16px;
+      overflow: hidden;
+      position: relative;
+    }
+    .topbar::after {
+      content: "";
+      position: absolute;
+      right: -70px;
+      top: -80px;
+      width: 280px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(49, 92, 255, .34), transparent 60%);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; min-width: 0; }
+    .brand-icon {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: grid; place-items: center;
+      background: white;
+      padding: 2px;
+      box-shadow: 0 8px 18px rgba(49,92,255,.25);
+      flex: 0 0 auto;
+      overflow: hidden;
+    }
+    .brand-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+    .brand h1 { margin: 0; font-size: 19px; line-height: 1.1; }
+    .brand p { margin: 3px 0 0; color: #cbd5e1; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; position: relative; z-index: 1; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      border-radius: 999px; padding: 4px 9px;
+      font-weight: 700; font-size: 11px; border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .pill.green { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+    .pill.blue { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .pill.orange { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+    .pill.gray { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+    .pill.red { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; background: currentColor; }
+
+    .layout {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 300px minmax(420px, 1fr) 360px;
+      gap: 10px;
+      align-items: start;
+    }
+    .column { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px;
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+    .card-title {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 7px;
+    }
+    .card-title h2 {
+      margin: 0; font-size: 14px; line-height: 1.2;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .icon { color: var(--primary); font-weight: 800; }
+    .row { display: flex; gap: 6px; align-items: center; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .spacer { height: 6px; }
+
+    .btn {
+      height: 32px; border-radius: 10px; border: 1px solid var(--border);
+      background: white; color: #0f172a; padding: 0 10px;
+      font-size: 12px; font-weight: 700; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      transition: 0.16s ease;
+      user-select: none;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); border-color: #b7c5db; box-shadow: 0 2px 7px rgba(15, 23, 42, .08); }
+    .btn:disabled { opacity: .48; cursor: not-allowed; transform: none; }
+    .btn.primary { background: var(--primary); color: white; border-color: var(--primary); }
+    .btn.primary:hover:not(:disabled) { background: var(--primary-2); }
+    .btn.danger { background: var(--danger-bg); color: var(--danger); border-color: #fecaca; }
+    .btn.success { background: var(--success-bg); color: var(--success); border-color: #bbf7d0; }
+    .input {
+      width: 100%; height: 29px; border-radius: 10px; border: 1px solid var(--border);
+      background: white; padding: 0 8px; outline: none;
+    }
+    .input:focus { border-color: #8db2ff; box-shadow: 0 0 0 3px rgba(49, 92, 255, .12); }
+    label.inline { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+    .filter-row { display: flex; gap: 8px; align-items: center; background: var(--soft); border: 1px solid #edf2f7; border-radius: 13px; padding: 6px; }
+    .filter-row span { color: var(--muted); font-size: 12px; }
+    .connected-box {
+      border: 1px solid #a7f3d0; background: var(--success-bg); color: #065f46;
+      border-radius: 12px; padding: 7px 10px; font-size: 12px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .drop {
+      width: 100%; min-height: 54px;
+      border: 1px dashed #b8ccff; border-radius: 13px;
+      background: #f4f7ff; color: var(--primary);
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      cursor: pointer; text-align: left;
+    }
+    .drop strong { display: block; font-size: 13px; }
+    .drop span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .file-info, .mini-box {
+      border-radius: 13px; background: var(--soft); border: 1px solid #edf2f7; padding: 7px;
+    }
+    .file-name { font-weight: 800; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .kv { display: grid; grid-template-columns: 1fr auto; gap: 5px; align-items: center; font-size: 12px; color: var(--muted); }
+    .kv b { color: #24314b; font-family: var(--mono); }
+    .kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; margin-top: 4px; font-size: 11px; color: var(--muted); }
+    .ok-box { display: flex; gap: 7px; align-items: center; border: 1px solid #a7f3d0; background: var(--success-bg); color: #065f46; border-radius: 12px; padding: 6px 10px; font-size: 12px; }
+    .warn-box { display: flex; gap: 7px; align-items: center; border: 1px solid #fed7aa; background: var(--warn-bg); color: #9a3412; border-radius: 12px; padding: 6px 10px; font-size: 12px; }
+
+    .mode { height: 28px; border-radius: 10px; border: 1px solid var(--border); background: white; font-size: 12px; font-weight: 700; cursor: pointer; }
+    .mode.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .metric { background: var(--soft); border: 1px solid #edf2f7; border-radius: 13px; padding: 8px 12px; min-height: 70px; }
+    .metric .label { color: var(--muted); font-size: 11px; }
+    .metric .value { color: var(--primary); font-size: 18px; font-weight: 850; line-height: 1.1; margin-top: 3px; }
+    .metric .hint { color: #94a3b8; font-size: 11px; margin-top: 2px; }
+    .metric.green .value { color: var(--success); }
+    .metric.dark .value { color: #334155; }
+    .panel-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .analysis-panel { background: var(--soft); border: 1px solid #edf2f7; border-radius: 14px; padding: 12px; min-height: 123px; }
+    .analysis-panel.blue { background: #eef5ff; border-color: #cfe0ff; }
+    .analysis-panel h3 { margin: 0 0 8px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+    .progress-top { display: flex; justify-content: space-between; align-items: center; font-size: 12px; margin-bottom: 5px; }
+    .bar { height: 8px; background: #edf2f7; border-radius: 999px; overflow: hidden; }
+    .bar > div { height: 100%; background: var(--primary); width: 0%; border-radius: 999px; transition: width .22s ease; }
+    .step { height: 38px; display: flex; align-items: center; gap: 10px; background: var(--soft); border: 1px solid #edf2f7; border-radius: 13px; padding: 0 12px; margin-top: 6px; }
+    .step-index { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: white; border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 700; }
+    .step-title { flex: 1; font-weight: 700; font-size: 12px; }
+    .step-state { color: #94a3b8; font-size: 15px; }
+    .step.done .step-state { color: var(--success); }
+    .step.running .step-state { color: var(--primary); }
+    .foreground-note { margin-top: 8px; padding: 6px 11px; border-radius: 12px; background: #eff6ff; border: 1px solid #dbeafe; color: #1d4ed8; font-size: 12px; }
+    .actions { background: white; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 8px; }
+
+    .console-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+    .console-count { text-align: center; border-radius: 10px; padding: 4px 5px; border: 1px solid var(--border); background: var(--soft); font-size: 11px; font-weight: 800; }
+    .console-count b { display: block; font-size: 14px; line-height: 16px; margin-top: 2px; }
+    .console-count.tx { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .console-count.rx { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+    .console-count.err { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+    .search-row { display: grid; grid-template-columns: 1fr 34px; gap: 6px; margin-top: 8px; }
+    .log-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+    .log-option { display: flex; align-items: center; gap: 6px; margin-top: 7px; color: var(--muted); font-size: 12px; }
+    .log-option input { margin: 0; }
+    .log-window { margin-top: 8px; border: 1px solid var(--border); border-radius: 14px; background: var(--soft); overflow: hidden; }
+    .log-head { height: 33px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; background: white; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 800; }
+    .log-list { height: 300px; overflow: auto; padding: 8px; font-family: var(--mono); font-size: 11px; }
+    .log-item { display: flex; gap: 6px; align-items: flex-start; padding: 4px 6px; border-radius: 8px; background: rgba(255,255,255,.7); margin-bottom: 5px; line-height: 1.35; word-break: break-word; }
+    .log-item.hidden { display: none; }
+    .tag { flex: 0 0 auto; border-radius: 5px; padding: 1px 5px; font-weight: 800; font-size: 10px; }
+    .tag.INFO { background: #e2e8f0; color: #475569; }
+    .tag.TX { background: #dbeafe; color: #1d4ed8; }
+    .tag.RX { background: #d1fae5; color: #047857; }
+    .tag.WARN { background: #ffedd5; color: #c2410c; }
+    .tag.ERROR { background: #fee2e2; color: #b91c1c; }
+    .time { color: #94a3b8; flex: 0 0 auto; }
+    .msg { color: #1e293b; }
+    .notes .note { border-radius: 12px; background: var(--soft); border: 1px solid #edf2f7; padding: 7px 10px; font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .notes b { color: #0f172a; }
+    .hidden-file { display: none; }
+
+    @media (max-width: 1180px) {
+      body { overflow: auto; }
+      .layout { grid-template-columns: 1fr; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .grid4, .panel-pair { grid-template-columns: 1fr 1fr; }
+      .log-list { height: 240px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon"><img src="designer_zh_logo.jpg" alt="Designer-Z.H logo" /></div>
+        <div>
+          <h1>WCH BLE OTA Web Updater</h1>
+          <p>Professional Web Bluetooth firmware update tool for CH32V208 / WCH BLE devices · Designed By Heng ZHANG (HKU) zhhku@connect.hku.hk</p>
+        </div>
+      </div>
+      <div class="pills">
+        <span id="browserPill" class="pill gray">Browser</span>
+        <span id="connectPill" class="pill gray">Not Connected</span>
+        <span id="otaPill" class="pill gray">OTA FEE0/FEE1</span>
+        <span id="statePill" class="pill gray">Idle</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="column">
+        <div class="actions grid2">
+          <button id="readInfoBtn" class="btn">⟳ Read Info</button>
+          <button id="parseBtn" class="btn">▣ Parse File</button>
+          <button id="startBtn" class="btn primary">▷ Start OTA</button>
+          <button id="cancelBtn" class="btn danger">□ Cancel</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><h2><span class="icon">◌</span>1. Device Connection</h2></div>
+          <div class="grid2">
+            <button id="scanBtn" class="btn primary">↯ Scan</button>
+            <button id="disconnectBtn" class="btn">⊗ Disconnect</button>
+          </div>
+          <div class="spacer"></div>
+          <div class="filter-row"><span>Filter</span><input id="nameFilter" class="input" value="HKU_" /></div>
+          <div class="spacer"></div>
+          <div class="grid2">
+            <label class="inline"><input id="otaOnly" type="checkbox" /> OTA only</label>
+            <label class="inline"><input id="allBle" type="checkbox" checked /> All BLE</label>
+          </div>
+          <div class="spacer"></div>
+          <div id="deviceBox" class="connected-box">No device connected</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><h2><span class="icon">⇧</span>2. Firmware File</h2></div>
+          <input id="fileInput" class="hidden-file" type="file" accept=".hex,.bin,.HEX,.BIN" />
+          <button id="selectFileBtn" class="drop" type="button">
+            <span style="font-size:20px">⇧</span>
+            <span><strong>Select HEX / BIN Firmware</strong><span>Drag and drop supported</span></span>
+          </button>
+          <div class="spacer"></div>
+          <div id="fileInfo" class="file-info">
+            <div class="file-name">No firmware selected</div>
+            <div class="kv-grid">
+              <div>Size: --</div><div>Type: --</div><div>Start: --</div><div>End: --</div>
+            </div>
+          </div>
+          <div class="spacer"></div>
+          <div id="firmwareCheck" class="warn-box">⚠ Select a firmware file first.</div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><h2><span class="icon">⚙</span>3. OTA Parameters</h2><span class="pill gray">Advanced</span></div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Transfer mode</div>
+          <div class="grid3">
+            <button data-mode="custom" class="mode">Custom</button>
+            <button data-mode="standard" class="mode">Standard</button>
+            <button data-mode="fast" class="mode active">Fast</button>
+          </div>
+          <div class="spacer"></div>
+          <div class="grid2">
+            <div class="mini-box"><div style="font-size:11px;color:var(--muted)">Packet size</div><b id="packetSizeLabel" style="color:var(--primary);font-size:15px">244 B</b></div>
+            <div class="mini-box"><div style="font-size:11px;color:var(--muted)">Packet delay</div><b id="packetDelayLabel" style="color:var(--primary);font-size:15px">0 ms</b></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="grid2">
+            <div class="filter-row"><span>Custom size</span><input id="customPacketSize" class="input" value="244" inputmode="numeric" /></div>
+            <div class="filter-row"><span>Delay ms</span><input id="customPacketDelay" class="input" value="0" inputmode="numeric" /></div>
+          </div>
+          <div class="spacer"></div>
+          <div class="filter-row"><span>BIN start</span><input id="binStartAddr" class="input" value="0x00004000" /></div>
+        </div>
+
+      </section>
+
+      <section class="column">
+        <div class="card">
+          <div class="card-title"><h2><span class="icon">◉</span>Update Dashboard</h2></div>
+          <div class="grid4">
+            <div class="metric"><div class="label">Chip</div><div id="chipValue" class="value">--</div><div id="chipHint" class="hint">Not read</div></div>
+            <div class="metric green"><div class="label">Active Image</div><div id="imageValue" class="value">--</div><div class="hint">Booted app</div></div>
+            <div class="metric"><div class="label">APP Offset</div><div id="offsetValue" class="value">--</div><div class="hint">OTA image start</div></div>
+            <div class="metric dark"><div class="label">Block Size</div><div id="blockValue" class="value">--</div><div class="hint">Erase unit</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><h2><span class="icon">▱</span>Firmware Analysis</h2></div>
+          <div class="panel-pair">
+            <div class="analysis-panel">
+              <h3><span class="icon">⇩</span>Parsed firmware</h3>
+              <div class="kv"><span>File type</span><b id="faType">--</b></div>
+              <div class="kv"><span>Start address</span><b id="faStart">--</b></div>
+              <div class="kv"><span>End address</span><b id="faEnd">--</b></div>
+              <div class="kv"><span>Image size</span><b id="faSize">--</b></div>
+              <div class="kv"><span>Erase blocks</span><b id="faBlocks">--</b></div>
+            </div>
+            <div class="analysis-panel blue">
+              <h3><span class="icon">◌</span>Transfer estimate</h3>
+              <div class="kv"><span>Write packets</span><b id="teWrite">--</b></div>
+              <div class="kv"><span>Verify packets</span><b id="teVerify">--</b></div>
+              <div class="kv"><span>Current speed</span><b id="teSpeed">--</b></div>
+              <div class="kv"><span>Estimated remaining</span><b id="teRemain">--</b></div>
+              <div class="kv"><span>Current address</span><b id="teAddr">--</b></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><h2><span class="icon">⚡</span>OTA Progress</h2><span id="stagePill" class="pill gray">Idle</span></div>
+          <div class="progress-top"><span>Total progress</span><b id="progressText">0%</b></div>
+          <div class="bar"><div id="progressBar"></div></div>
+          <div id="stepsBox">
+            <div class="step" data-step="info"><div class="step-index">1</div><div class="step-title">Read Device Info</div><div class="step-state">○</div></div>
+            <div class="step" data-step="erase"><div class="step-index">2</div><div class="step-title">Erase Flash</div><div class="step-state">○</div></div>
+            <div class="step" data-step="program"><div class="step-index">3</div><div class="step-title">Write Firmware</div><div class="step-state">○</div></div>
+            <div class="step" data-step="verify"><div class="step-index">4</div><div class="step-title">Verify Image</div><div class="step-state">○</div></div>
+            <div class="step" data-step="end"><div class="step-index">5</div><div class="step-title">Finish & Reboot</div><div class="step-state">○</div></div>
+          </div>
+          <div class="foreground-note">Keep this page in foreground during OTA.</div>
+        </div>
+      </section>
+
+      <section class="column">
+        <div class="card">
+          <div class="card-title"><h2><span class="icon">▣</span>Live Console</h2><span class="pill green"><span class="dot"></span> Auto-scroll</span></div>
+          <div class="console-summary">
+            <div class="console-count">INFO<b id="cntInfo">0</b></div>
+            <div class="console-count tx">TX<b id="cntTx">0</b></div>
+            <div class="console-count rx">RX<b id="cntRx">0</b></div>
+            <div class="console-count err">ERR<b id="cntErr">0</b></div>
+          </div>
+          <div class="search-row"><input id="logSearch" class="input" placeholder="Search log, command, address..." /><button class="btn">⌕</button></div>
+          <div class="log-actions">
+            <button id="pauseLogBtn" class="btn">Ⅱ Pause</button>
+            <button id="copyLogBtn" class="btn">▣ Copy</button>
+            <button id="exportLogBtn" class="btn">⇩ Export</button>
+            <button id="clearLogBtn" class="btn">⌫ Clear</button>
+          </div>
+          <label class="log-option"><input id="logEachPacket" type="checkbox" /> Log every PROGRAM / VERIFY packet</label>
+          <div class="log-window">
+            <div class="log-head"><span>▣ OTA transaction log</span><span><small>HEX view</small> <span class="pill blue">FEE1</span></span></div>
+            <div id="logList" class="log-list"></div>
+          </div>
+        </div>
+        <div class="card notes">
+          <div class="card-title"><h2><span class="icon">△</span>Notes</h2></div>
+          <div class="note"><b>Chrome / Edge recommended.</b> Use HTTPS or localhost. iPhone Safari does not support Web Bluetooth.</div>
+          <div class="note"><b>OTA firmware:</b> CH32V208 OTA HEX should normally start from 0x00004000. Debug firmware starts from 0x00000000.</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    "use strict";
+
+    const OTA_SERVICE_UUID = "0000fee0-0000-1000-8000-00805f9b34fb";
+    const OTA_CHAR_UUID = "0000fee1-0000-1000-8000-00805f9b34fb";
+    const CMD_PROGRAM = 0x80;
+    const CMD_ERASE = 0x81;
+    const CMD_VERIFY = 0x82;
+    const CMD_END = 0x83;
+    const CMD_INFO = 0x84;
+    const ADDRESS_BASE = 16;
+    const FLASH_BASE = 0x08000000;
+
+    const els = Object.fromEntries(Array.from(document.querySelectorAll("[id]")).map(el => [el.id, el]));
+
+    const state = {
+      device: null,
+      server: null,
+      service: null,
+      char: null,
+      firmwareFile: null,
+      firmware: null,
+      currentInfo: null,
+      mode: "fast",
+      packetSize: 244,
+      packetDelay: 0,
+      flow: { burst: 12, minBurst: 2, maxBurst: 48, targetBps: 100 * 1024 },
+      running: false,
+      cancel: false,
+      pausedLog: false,
+      logEachPacket: false,
+      logs: [],
+      counts: { INFO: 0, TX: 0, RX: 0, WARN: 0, ERROR: 0 },
+      startedAt: 0,
+    };
+
+    function hex(n, width = 8) {
+      if (typeof n !== "number" || Number.isNaN(n)) return "--";
+      return "0x" + (n >>> 0).toString(16).toUpperCase().padStart(width, "0");
+    }
+    function byteHex(b) { return (b & 0xff).toString(16).toUpperCase().padStart(2, "0"); }
+    function bytesToHex(bytes, max = 80) {
+      const arr = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes.buffer || bytes);
+      const shown = Array.from(arr.slice(0, max)).map(byteHex).join(" ");
+      return arr.length > max ? shown + " ..." : shown;
+    }
+    function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+    function parseAddr(value, fallback = 0x4000) {
+      const s = String(value || "").trim();
+      if (!s) return fallback;
+      const n = s.toLowerCase().startsWith("0x") ? parseInt(s, 16) : parseInt(s, 10);
+      return Number.isFinite(n) ? n : fallback;
+    }
+    function fmtSize(bytes) {
+      if (!bytes && bytes !== 0) return "--";
+      if (bytes < 1024) return bytes + " B";
+      return (bytes / 1024).toFixed(1) + " KB";
+    }
+
+    function setPill(el, cls, text) {
+      el.className = "pill " + cls;
+      el.textContent = text;
+    }
+    function setStep(name, status) {
+      const el = document.querySelector(`.step[data-step="${name}"]`);
+      if (!el) return;
+      el.classList.remove("done", "running");
+      const stateEl = el.querySelector(".step-state");
+      if (status === "done") { el.classList.add("done"); stateEl.textContent = "✓"; }
+      else if (status === "running") { el.classList.add("running"); stateEl.textContent = "⌁"; }
+      else { stateEl.textContent = "○"; }
+    }
+    function resetSteps() {
+      ["info", "erase", "program", "verify", "end"].forEach(s => setStep(s, "idle"));
+    }
+    function setProgress(percent, stage = null) {
+      const p = Math.max(0, Math.min(100, Math.round(percent || 0)));
+      els.progressBar.style.width = p + "%";
+      els.progressText.textContent = p + "%";
+      if (stage) {
+        els.stagePill.className = "pill " + (stage === "Error" ? "red" : stage === "Done" ? "green" : "orange");
+        els.stagePill.textContent = stage;
+        setPill(els.statePill, stage === "Error" ? "red" : stage === "Done" ? "green" : "orange", stage);
+      }
+    }
+    function updateButtons() {
+      const connected = !!state.char;
+      const hasFile = !!state.firmwareFile;
+      els.disconnectBtn.disabled = !state.device;
+      els.readInfoBtn.disabled = !connected || state.running;
+      els.parseBtn.disabled = !hasFile || state.running;
+      els.startBtn.disabled = !connected || !hasFile || state.running;
+      els.cancelBtn.disabled = !state.running;
+      els.scanBtn.disabled = state.running;
+    }
+    function updateCounts() {
+      els.cntInfo.textContent = state.counts.INFO || 0;
+      els.cntTx.textContent = state.counts.TX || 0;
+      els.cntRx.textContent = state.counts.RX || 0;
+      els.cntErr.textContent = state.counts.ERROR || 0;
+    }
+    function log(level, text, bytes) {
+      if (level === "ERR") level = "ERROR";
+      const time = new Date().toTimeString().slice(0, 8) + "." + String(new Date().getMilliseconds()).padStart(3, "0");
+      const message = bytes ? `${text} ${bytesToHex(bytes)}` : text;
+      const item = { level, time, message };
+      state.logs.push(item);
+      if (state.counts[level] !== undefined) state.counts[level]++;
+      updateCounts();
+      if (state.pausedLog) return;
+      appendLogItem(item);
+    }
+    function appendLogItem(item) {
+      const row = document.createElement("div");
+      row.className = "log-item";
+      row.dataset.text = `${item.level} ${item.time} ${item.message}`.toLowerCase();
+      row.innerHTML = `<span class="tag ${item.level}">${item.level}</span><span class="time">${item.time}</span><span style="color:#cbd5e1">|</span><span class="msg">${item.message}</span>`;
+      els.logList.appendChild(row);
+      filterLog();
+      els.logList.scrollTop = els.logList.scrollHeight;
+    }
+    function renderAllLogs() {
+      els.logList.innerHTML = "";
+      if (!state.pausedLog) state.logs.forEach(appendLogItem);
+      else state.logs.forEach(item => {
+        const row = document.createElement("div");
+        row.className = "log-item";
+        row.dataset.text = `${item.level} ${item.time} ${item.message}`.toLowerCase();
+        row.innerHTML = `<span class="tag ${item.level}">${item.level}</span><span class="time">${item.time}</span><span style="color:#cbd5e1">|</span><span class="msg">${item.message}</span>`;
+        els.logList.appendChild(row);
+      });
+      filterLog();
+    }
+    function filterLog() {
+      const q = els.logSearch.value.trim().toLowerCase();
+      Array.from(els.logList.children).forEach(row => {
+        row.classList.toggle("hidden", q && !row.dataset.text.includes(q));
+      });
+    }
+
+    function commandInfo() {
+      const out = new Uint8Array(20);
+      out[0] = CMD_INFO;
+      out[1] = 18;
+      return out;
+    }
+    function commandErase(addr, blocks) {
+      const out = new Uint8Array(20);
+      const a = Math.floor(addr / ADDRESS_BASE);
+      out[0] = CMD_ERASE;
+      out[1] = 0;
+      out[2] = a & 0xff;
+      out[3] = (a >> 8) & 0xff;
+      out[4] = blocks & 0xff;
+      out[5] = (blocks >> 8) & 0xff;
+      return out;
+    }
+    function commandData(cmd, addr, data, offset, packetSize) {
+      const out = new Uint8Array(packetSize);
+      const payloadLen = packetSize - 4;
+      const len = Math.min(payloadLen, data.length - offset);
+      const a = Math.floor(addr / ADDRESS_BASE);
+      out[0] = cmd;
+      out[1] = payloadLen;
+      out[2] = a & 0xff;
+      out[3] = (a >> 8) & 0xff;
+      out.set(data.slice(offset, offset + len), 4);
+      return { packet: out, used: len };
+    }
+    function commandEnd() {
+      const out = new Uint8Array(20);
+      out[0] = CMD_END;
+      out[1] = 18;
+      return out;
+    }
+
+    async function rawBleWrite(bytes) {
+      if (!state.char) throw new Error("OTA characteristic is not ready.");
+      if (state.char.writeValueWithoutResponse) {
+        await state.char.writeValueWithoutResponse(bytes);
+      } else {
+        await state.char.writeValue(bytes);
+      }
+    }
+
+    async function writeBleBurst(packets) {
+      // Web Bluetooth does not allow multiple GATT operations at the same time.
+      // Promise.all() can trigger: "GATT operation already in progress".
+      // Keep a batch/burst concept for flow control, but write each packet sequentially.
+      if (!packets.length) return;
+      for (const packet of packets) {
+        await rawBleWrite(packet);
+      }
+    }
+
+    async function transmitImagePhase(cmd, label, startAddr, fw, basePct, pctSpan) {
+      const total = fw.data.length;
+      let offset = 0;
+      let lastUi = 0;
+      let lastLog = 0;
+      let burst = state.flow.burst || 12;
+      const minBurst = state.flow.minBurst || 2;
+      const maxBurst = state.flow.maxBurst || 48;
+      const targetBps = state.flow.targetBps || (100 * 1024);
+      const phaseStart = performance.now();
+
+      log("INFO", `${label} sequential queue enabled: target ${(targetBps / 1024).toFixed(0)} KB/s, batch ${burst}, max batch ${maxBurst}`);
+
+      while (offset < total) {
+        if (state.cancel) throw new Error("OTA canceled by user.");
+
+        const packets = [];
+        let tempOffset = offset;
+        let dataBytes = 0;
+        for (let i = 0; i < burst && tempOffset < total; i++) {
+          const { packet, used } = commandData(cmd, startAddr + tempOffset, fw.data, tempOffset, state.packetSize);
+          packets.push(packet);
+          tempOffset += used;
+          dataBytes += used;
+        }
+
+        const t0 = performance.now();
+        try {
+          await writeBleBurst(packets);
+        } catch (err) {
+          if (burst > minBurst) {
+            burst = Math.max(minBurst, Math.floor(burst / 2));
+            state.flow.burst = burst;
+            log("WARN", `${label} batch write failed; reduce batch to ${burst} and retry current address ${hex(startAddr + offset)}.`);
+            await sleep(20);
+            continue;
+          }
+          throw new Error(`${label} BLE write failed at ${hex(startAddr + offset)} with packet ${state.packetSize} B. Try Custom = 128 B. Original: ${err.message || err}`);
+        }
+
+        if (state.logEachPacket) {
+          const payloadLenForLog = Math.max(1, state.packetSize - 4);
+          for (let i = 0; i < packets.length; i++) {
+            log("TX", `${label} packet ${hex(startAddr + offset + i * payloadLenForLog)}:`, packets[i]);
+          }
+        }
+
+        offset = tempOffset;
+        if (state.packetDelay > 0) await sleep(state.packetDelay);
+
+        const now = performance.now();
+        const dt = Math.max(1, now - t0);
+        const batchBps = dataBytes / (dt / 1000);
+        const elapsed = Math.max(0.1, (now - phaseStart) / 1000);
+        const avgBps = offset / elapsed;
+
+        if (batchBps > targetBps * 1.15 && burst < maxBurst) {
+          burst = Math.min(maxBurst, burst + 2);
+        } else if (batchBps < targetBps * 0.55 && burst < maxBurst) {
+          burst = Math.min(maxBurst, burst + 4);
+        } else if (dt > 450 && burst > minBurst) {
+          burst = Math.max(minBurst, burst - 2);
+        }
+        state.flow.burst = burst;
+
+        if (now - lastUi > 100 || offset >= total) {
+          setProgress(basePct + (offset / total) * pctSpan, label === "PROGRAM" ? "Writing firmware" : "Verifying image");
+          els.teAddr.textContent = hex(startAddr + offset);
+          els.teSpeed.textContent = fmtSize(avgBps) + "/s";
+          const remain = (total - offset) / Math.max(1, avgBps);
+          els.teRemain.textContent = remain.toFixed(0) + " s";
+          lastUi = now;
+          await sleep(0);
+        }
+        if (now - lastLog > 500 || offset >= total) {
+          log("INFO", `${label} ${fmtSize(offset)}/${fmtSize(total)}, avg ${fmtSize(avgBps)}/s, burst ${burst}, addr ${hex(startAddr + offset)}`);
+          lastLog = now;
+        }
+      }
+    }
+    async function writeBytes(bytes, label = "TX") {
+      if (!state.char) throw new Error("OTA characteristic is not ready.");
+      log("TX", label + ":", bytes);
+      try {
+        await rawBleWrite(bytes);
+      } catch (err) {
+        throw new Error(`BLE write failed at ${bytes.length} B. Try a smaller packet size such as 128 B or 64 B in Custom mode. Original: ${err.message || err}`);
+      }
+    }
+    async function readBytes(label = "RX") {
+      if (!state.char) throw new Error("OTA characteristic is not ready.");
+      const dv = await state.char.readValue();
+      const out = new Uint8Array(dv.buffer.slice(dv.byteOffset, dv.byteOffset + dv.byteLength));
+      log("RX", label + ":", out);
+      return out;
+    }
+    async function writeAndRead(bytes, delayMs = 120, label = "CMD") {
+      await writeBytes(bytes, label);
+      await sleep(delayMs);
+      for (let i = 0; i < 5; i++) {
+        const res = await readBytes(label + " response");
+        if (res && res.length > 0) return res;
+        await sleep(80);
+      }
+      return new Uint8Array();
+    }
+
+    function parseImageInfo(bytes) {
+      if (!bytes || bytes.length < 9) throw new Error("Invalid image info response.");
+      const flag = bytes[0];
+      const image = flag === 1 ? "Image A" : flag === 2 ? "Image B" : flag === 3 ? "IAP" : "Unknown";
+      const offset = bytes[1] | (bytes[2] << 8) | (bytes[3] << 16) | (bytes[4] << 24);
+      const blockSize = bytes[5] | (bytes[6] << 8);
+      const chipLo = bytes[7];
+      const chipHi = bytes[8];
+      let chip = "Unknown";
+      if (chipLo === 0x08 && chipHi === 0x02) chip = "CH32V208";
+      else if (chipLo === 0x08 && chipHi === 0xf2) chip = "CH32F208";
+      else if (chipLo === 0x83 && chipHi === 0x00) chip = "CH583";
+      else if (chipLo === 0x73 && chipHi === 0x00) chip = "CH573";
+      else if (chipLo === 0x92 && chipHi === 0x00) chip = "CH592";
+      else if (chipLo === 0x79 && chipHi === 0x00) chip = "CH579";
+      return { image, offset: offset >>> 0, blockSize, chip, chipCode: `0x${byteHex(chipHi)}${byteHex(chipLo)}` };
+    }
+
+    function normalizeStartAddress(addr) {
+      if (addr >= FLASH_BASE) return addr - FLASH_BASE;
+      return addr;
+    }
+    function intelHexChecksum(bytes) {
+      const sum = bytes.reduce((acc, b) => (acc + b) & 0xff, 0);
+      return ((~sum + 1) & 0xff);
+    }
+    function parseHexText(text) {
+      const lines = text.replace(/\r/g, "").split("\n").map(s => s.trim()).filter(Boolean);
+      let upperLinear = 0;
+      let upperSegment = 0;
+      let mode = "linear";
+      const records = [];
+      let min = Number.POSITIVE_INFINITY;
+      let max = -1;
+      for (const line of lines) {
+        if (!line.startsWith(":")) throw new Error("HEX line does not start with ':'");
+        const raw = line.slice(1);
+        if (raw.length < 10 || raw.length % 2 !== 0 || !/^[0-9a-fA-F]+$/.test(raw)) throw new Error("Invalid HEX line: " + line);
+        const bytes = [];
+        for (let i = 0; i < raw.length; i += 2) bytes.push(parseInt(raw.slice(i, i + 2), 16));
+        const len = bytes[0];
+        const offset = (bytes[1] << 8) | bytes[2];
+        const type = bytes[3];
+        const data = bytes.slice(4, 4 + len);
+        const check = bytes[4 + len];
+        if (data.length !== len) throw new Error("Invalid HEX data length.");
+        if (intelHexChecksum(bytes.slice(0, 4 + len)) !== check) throw new Error("HEX checksum error at: " + line);
+        if (type === 0x00) {
+          const base = mode === "segment" ? (upperSegment << 4) : (upperLinear << 16);
+          const addr = base + offset;
+          records.push({ addr, data: new Uint8Array(data) });
+          min = Math.min(min, addr);
+          max = Math.max(max, addr + data.length);
+        } else if (type === 0x01) {
+          break;
+        } else if (type === 0x02) {
+          if (len !== 2) throw new Error("Invalid extended segment address record.");
+          upperSegment = (data[0] << 8) | data[1];
+          mode = "segment";
+        } else if (type === 0x04) {
+          if (len !== 2) throw new Error("Invalid extended linear address record.");
+          upperLinear = (data[0] << 8) | data[1];
+          mode = "linear";
+        } else if (type === 0x03 || type === 0x05) {
+          // Start address records are not needed for OTA data transfer.
+        } else {
+          throw new Error("Unsupported HEX record type: " + type);
+        }
+      }
+      if (!records.length) throw new Error("No data records found in HEX file.");
+      const size = max - min;
+      const data = new Uint8Array(size);
+      data.fill(0x00);
+      for (const rec of records) data.set(rec.data, rec.addr - min);
+      return {
+        type: "Intel HEX",
+        startAddressRaw: min >>> 0,
+        startAddress: normalizeStartAddress(min >>> 0),
+        endAddressRaw: max >>> 0,
+        endAddress: normalizeStartAddress(max >>> 0),
+        size,
+        data,
+      };
+    }
+    async function parseFirmwareFile(file) {
+      const lower = file.name.toLowerCase();
+      if (lower.endsWith(".hex")) {
+        return parseHexText(await file.text());
+      }
+      if (lower.endsWith(".bin")) {
+        const buf = new Uint8Array(await file.arrayBuffer());
+        const start = parseAddr(els.binStartAddr.value, 0x4000);
+        return { type: "BIN", startAddressRaw: start, startAddress: start, endAddressRaw: start + buf.length, endAddress: start + buf.length, size: buf.length, data: buf };
+      }
+      throw new Error("Only .hex and .bin files are supported.");
+    }
+
+    function updateFirmwareUi() {
+      const fw = state.firmware;
+      if (!fw) {
+        els.fileInfo.innerHTML = `<div class="file-name">No firmware selected</div><div class="kv-grid"><div>Size: --</div><div>Type: --</div><div>Start: --</div><div>End: --</div></div>`;
+        els.firmwareCheck.className = "warn-box";
+        els.firmwareCheck.textContent = "⚠ Select a firmware file first.";
+        return;
+      }
+      const blocks = getEraseBlocks();
+      const packets = Math.ceil(fw.data.length / Math.max(1, state.packetSize - 4));
+      els.fileInfo.innerHTML = `<div class="file-name">▣ ${state.firmwareFile.name}</div><div class="kv-grid"><div>Size: ${fmtSize(fw.size)}</div><div>Type: ${fw.type}</div><div>Start: ${hex(fw.startAddress)}</div><div>End: ${hex(fw.endAddress)}</div></div>`;
+      els.faType.textContent = fw.type;
+      els.faStart.textContent = hex(fw.startAddress);
+      els.faEnd.textContent = hex(fw.endAddress);
+      els.faSize.textContent = fmtSize(fw.size);
+      els.faBlocks.textContent = blocks || "--";
+      els.teWrite.textContent = packets.toLocaleString();
+      els.teVerify.textContent = packets.toLocaleString();
+      els.teAddr.textContent = hex(fw.startAddress);
+      if (fw.startAddress === 0x4000) {
+        els.firmwareCheck.className = "ok-box";
+        els.firmwareCheck.textContent = "✓ Valid OTA address: 0x00004000";
+      } else if (fw.startAddress === 0) {
+        els.firmwareCheck.className = "warn-box";
+        els.firmwareCheck.textContent = "⚠ Debug firmware starts at 0x00000000. Do not use it as OTA package.";
+      } else {
+        els.firmwareCheck.className = "warn-box";
+        els.firmwareCheck.textContent = `⚠ Firmware start address is ${hex(fw.startAddress)}. Confirm it matches your IAP design.`;
+      }
+    }
+    function getEraseBlocks() {
+      if (!state.firmware) return 0;
+      const blockSize = state.currentInfo?.blockSize || 4096;
+      return Math.ceil(state.firmware.data.length / blockSize);
+    }
+    function updateDeviceUi(info) {
+      if (!info) return;
+      els.chipValue.textContent = info.chip;
+      els.chipHint.textContent = info.chipCode;
+      els.imageValue.textContent = info.image;
+      els.offsetValue.textContent = hex(info.offset, 4);
+      els.blockValue.textContent = info.blockSize ? fmtSize(info.blockSize) : "--";
+      updateFirmwareUi();
+    }
+
+    async function scanAndConnect() {
+      if (!navigator.bluetooth) throw new Error("Web Bluetooth is not available in this browser.");
+      const filter = els.nameFilter.value || "HKU_";
+      const useAll = els.allBle.checked;
+      const otaOnly = els.otaOnly.checked;
+      let options;
+      if (useAll) {
+        options = { acceptAllDevices: true, optionalServices: [OTA_SERVICE_UUID] };
+      } else if (otaOnly) {
+        // More tolerant picker: show devices that either match the name prefix OR advertise the OTA service.
+        // Some BLE stacks do not expose the complete name during scanning, and some devices do not advertise FEE0,
+        // so using both filters avoids the "no device found" problem while still keeping the list focused.
+        options = { filters: [{ namePrefix: filter }, { services: [OTA_SERVICE_UUID] }], optionalServices: [OTA_SERVICE_UUID] };
+      } else {
+        options = { filters: [{ namePrefix: filter }], optionalServices: [OTA_SERVICE_UUID] };
+      }
+      log("INFO", `Opening Bluetooth device picker: ${useAll ? "all BLE devices" : otaOnly ? "name prefix or OTA service" : "name prefix only"}...`);
+      const device = await navigator.bluetooth.requestDevice(options);
+      state.device = device;
+      device.addEventListener("gattserverdisconnected", onDisconnected);
+      els.deviceBox.textContent = `${device.name || "Unnamed device"} · connecting...`;
+      setPill(els.connectPill, "orange", "Connecting");
+      const server = await device.gatt.connect();
+      state.server = server;
+      let service;
+      try {
+        service = await server.getPrimaryService(OTA_SERVICE_UUID);
+      } catch (e) {
+        throw new Error("Connected, but OTA service FEE0 was not found. Try checking 'All BLE', or confirm the device is running the OTA firmware.");
+      }
+      state.service = service;
+      const characteristic = await service.getCharacteristic(OTA_CHAR_UUID);
+      state.char = characteristic;
+      els.deviceBox.textContent = `${device.name || "Unnamed device"} · OTA FEE0/FEE1 found`;
+      setPill(els.connectPill, "green", "Device Connected");
+      setPill(els.otaPill, "blue", "OTA FEE0/FEE1");
+      log("INFO", `Connected to device: ${device.name || "Unnamed device"}`);
+      updateButtons();
+    }
+    function onDisconnected() {
+      log("WARN", "Device disconnected.");
+      state.server = null; state.service = null; state.char = null;
+      setPill(els.connectPill, "gray", "Not Connected");
+      setPill(els.otaPill, "gray", "OTA FEE0/FEE1");
+      els.deviceBox.textContent = "No device connected";
+      updateButtons();
+    }
+    async function disconnect() {
+      if (state.device?.gatt?.connected) state.device.gatt.disconnect();
+      onDisconnected();
+    }
+    async function readDeviceInfo() {
+      setStep("info", "running");
+      const res = await writeAndRead(commandInfo(), 160, "INFO");
+      const info = parseImageInfo(res);
+      state.currentInfo = info;
+      setStep("info", "done");
+      updateDeviceUi(info);
+      log("INFO", `Chip: ${info.chip}, ${info.image}, offset ${hex(info.offset)}, block ${info.blockSize}`);
+    }
+    async function parseSelectedFile() {
+      if (!state.firmwareFile) throw new Error("No firmware file selected.");
+      state.firmware = await parseFirmwareFile(state.firmwareFile);
+      updateFirmwareUi();
+      log("INFO", `Parsed firmware: ${state.firmware.type}, start ${hex(state.firmware.startAddress)}, size ${fmtSize(state.firmware.size)}`);
+    }
+    async function startOta() {
+      if (!state.char) throw new Error("Device is not connected.");
+      if (!state.firmwareFile) throw new Error("Select firmware first.");
+      state.running = true;
+      state.cancel = false;
+      state.startedAt = performance.now();
+      updateButtons();
+      resetSteps();
+      setProgress(0, "Starting");
+      try {
+        if (!state.firmware) await parseSelectedFile();
+        await readDeviceInfo();
+        const fw = state.firmware;
+        const startAddr = fw.startAddress;
+        const blocks = getEraseBlocks();
+        const payloadLen = state.packetSize - 4;
+        log("INFO", `Transfer mode ${state.mode.toUpperCase()}: packet ${state.packetSize} B, payload ${payloadLen} B, delay ${state.packetDelay} ms`);
+        if (state.packetSize > 128) log("INFO", "High-speed mode: batch write queue + dynamic flow control enabled. If unstable, use Custom = 128 B.");
+        log("INFO", `Erase address ${hex(startAddr)}, blocks ${blocks}`);
+
+        setStep("erase", "running");
+        const eraseRes = await writeAndRead(commandErase(startAddr, blocks), 900, "ERASE");
+        if (!eraseRes.length || eraseRes[0] !== 0x00) throw new Error(`Erase failed. Response: ${bytesToHex(eraseRes)}`);
+        setStep("erase", "done");
+        log("INFO", "Erase completed.");
+        setProgress(8, "Writing firmware");
+
+        setStep("program", "running");
+        const total = fw.data.length;
+        await transmitImagePhase(CMD_PROGRAM, "PROGRAM", startAddr, fw, 8, 57);
+        setStep("program", "done");
+        log("INFO", "Program completed.");
+
+        setStep("verify", "running");
+        setProgress(68, "Verifying image");
+        await transmitImagePhase(CMD_VERIFY, "VERIFY", startAddr, fw, 68, 27);
+        await sleep(1000);
+        const verifyRes = await readBytes("VERIFY final response");
+        if (!verifyRes.length || verifyRes[0] !== 0x00) throw new Error(`Verify failed. Response: ${bytesToHex(verifyRes)}`);
+        setStep("verify", "done");
+        log("INFO", "Verify completed.");
+
+        setStep("end", "running");
+        setProgress(98, "Finishing");
+        await writeBytes(commandEnd(), "END");
+        setStep("end", "done");
+        setProgress(100, "Done");
+        log("INFO", "OTA finished. Device should reboot and IAP will copy Image B to Image A.");
+      } catch (err) {
+        setProgress(Number(els.progressText.textContent.replace("%", "")) || 0, "Error");
+        log("ERROR", err.message || String(err));
+      } finally {
+        state.running = false;
+        updateButtons();
+      }
+    }
+
+    function getCustomPacketValue(el, fallback, min, max) {
+      const n = parseInt(el.value, 10);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function applyMode(mode) {
+      state.mode = mode;
+      document.querySelectorAll(".mode").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+      if (mode === "custom") {
+        state.packetSize = getCustomPacketValue(els.customPacketSize, 244, 8, 251);
+        state.packetDelay = getCustomPacketValue(els.customPacketDelay, 0, 0, 100);
+      } else if (mode === "fast") {
+        // High-speed default. Packet 244 B gives 240 B firmware payload per command.
+        state.packetSize = 244;
+        state.packetDelay = 0;
+        state.flow.burst = 12;
+      } else {
+        state.packetSize = 128;
+        state.packetDelay = 3;
+        state.flow.burst = 8;
+      }
+      els.packetSizeLabel.textContent = state.packetSize + " B";
+      els.packetDelayLabel.textContent = state.packetDelay + " ms";
+      updateFirmwareUi();
+    }
+
+    function setupEvents() {
+      els.scanBtn.addEventListener("click", () => scanAndConnect().catch(e => log("ERROR", e.message)));
+      els.disconnectBtn.addEventListener("click", () => disconnect().catch(e => log("ERROR", e.message)));
+      els.readInfoBtn.addEventListener("click", () => readDeviceInfo().catch(e => log("ERROR", e.message)));
+      els.parseBtn.addEventListener("click", () => parseSelectedFile().catch(e => log("ERROR", e.message)));
+      els.startBtn.addEventListener("click", () => startOta());
+      els.cancelBtn.addEventListener("click", () => { state.cancel = true; log("WARN", "Cancel requested. Waiting for current packet to finish..."); });
+      els.selectFileBtn.addEventListener("click", () => els.fileInput.click());
+      els.fileInput.addEventListener("change", async () => {
+        const file = els.fileInput.files?.[0];
+        if (!file) return;
+        state.firmwareFile = file;
+        state.firmware = null;
+        log("INFO", `Selected file: ${file.name}, ${fmtSize(file.size)}`);
+        try { await parseSelectedFile(); } catch (e) { log("ERROR", e.message); }
+        updateButtons();
+      });
+      ["dragenter", "dragover"].forEach(ev => els.selectFileBtn.addEventListener(ev, e => { e.preventDefault(); els.selectFileBtn.style.borderColor = "#315cff"; }));
+      ["dragleave", "drop"].forEach(ev => els.selectFileBtn.addEventListener(ev, e => { e.preventDefault(); els.selectFileBtn.style.borderColor = "#b8ccff"; }));
+      els.selectFileBtn.addEventListener("drop", async e => {
+        const file = e.dataTransfer.files?.[0];
+        if (!file) return;
+        state.firmwareFile = file;
+        state.firmware = null;
+        log("INFO", `Dropped file: ${file.name}, ${fmtSize(file.size)}`);
+        try { await parseSelectedFile(); } catch (err) { log("ERROR", err.message); }
+        updateButtons();
+      });
+      document.querySelectorAll(".mode").forEach(btn => btn.addEventListener("click", () => applyMode(btn.dataset.mode)));
+      [els.customPacketSize, els.customPacketDelay].forEach(input => {
+        input.addEventListener("input", () => {
+          if (state.mode === "custom") applyMode("custom");
+        });
+      });
+      els.binStartAddr.addEventListener("change", () => { if (state.firmwareFile?.name.toLowerCase().endsWith(".bin")) state.firmware = null; });
+      els.logSearch.addEventListener("input", filterLog);
+      els.clearLogBtn.addEventListener("click", () => { state.logs = []; state.counts = { INFO: 0, TX: 0, RX: 0, WARN: 0, ERROR: 0 }; els.logList.innerHTML = ""; updateCounts(); });
+      els.pauseLogBtn.addEventListener("click", () => { state.pausedLog = !state.pausedLog; els.pauseLogBtn.textContent = state.pausedLog ? "▶ Resume" : "Ⅱ Pause"; if (!state.pausedLog) renderAllLogs(); });
+      els.copyLogBtn.addEventListener("click", async () => { await navigator.clipboard.writeText(state.logs.map(x => `[${x.time}] ${x.level} ${x.message}`).join("\n")); log("INFO", "Log copied to clipboard."); });
+      els.exportLogBtn.addEventListener("click", () => {
+        const blob = new Blob([state.logs.map(x => `[${x.time}] ${x.level} ${x.message}`).join("\n")], { type: "text/plain" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `ch32_ota_log_${new Date().toISOString().replace(/[:.]/g, "-")}.txt`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+      els.logEachPacket.addEventListener("change", () => {
+        state.logEachPacket = els.logEachPacket.checked;
+        log("INFO", state.logEachPacket ? "Per-packet PROGRAM / VERIFY logging enabled. This may slow OTA." : "Per-packet PROGRAM / VERIFY logging disabled.");
+      });
+      els.allBle.addEventListener("change", () => { if (els.allBle.checked) els.otaOnly.checked = false; });
+      els.otaOnly.addEventListener("change", () => { if (els.otaOnly.checked) els.allBle.checked = false; });
+    }
+
+    function init() {
+      const ok = !!navigator.bluetooth;
+      setPill(els.browserPill, ok ? "green" : "red", ok ? "Browser Ready" : "No Web Bluetooth");
+      setPill(els.connectPill, "gray", "Not Connected");
+      setPill(els.otaPill, "gray", "OTA FEE0/FEE1");
+      setPill(els.statePill, "gray", "Idle");
+      resetSteps();
+      setProgress(0, "Idle");
+      setupEvents();
+      updateCounts();
+      updateButtons();
+      applyMode("fast");
+      log("INFO", ok ? "Web Bluetooth is available. Chrome / Edge is recommended." : "Web Bluetooth is not available. Use Chrome / Edge on HTTPS or localhost.");
+    }
+
+    init();
+  </script>
+</body>
+</html>
