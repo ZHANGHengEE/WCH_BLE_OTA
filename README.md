@@ -5,15 +5,14 @@
 https://zhanghengee.github.io/WCH_BLE_OTA/
 
 
-Do not open `index.html` directly with `file:///` for real BLE use.
+You may open index.html directly with file:/// in Chrome/Edge if Web Bluetooth works on your system.
 
-1. Unzip this folder.
-2. Double-click `start_local_server.cmd`.
-3. Open Chrome / Edge:
+Recommended for stable BLE use:
+1. Double-click start_local_server.cmd
+2. Open http://localhost:8080
 
-```text
-http://localhost:8080
-```
+If Bluetooth scanning or file loading does not work under file:///, use localhost.
+
 
 ## Default settings
 
