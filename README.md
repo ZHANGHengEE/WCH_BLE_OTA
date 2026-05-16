@@ -2,6 +2,9 @@
 
 ## How to run
 
+https://zhanghengee.github.io/WCH_BLE_OTA/
+
+
 Do not open `index.html` directly with `file:///` for real BLE use.
 
 1. Unzip this folder.
