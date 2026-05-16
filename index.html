@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CH32 BLE OTA Web Updater</title>
-  <link rel="icon" href="designer_zh_logo.jpg" type="image/jpeg" />
+  <title>WCH BLE OTA Web Updater</title>
+  <link rel="icon" href="logo.jpg" type="image/jpeg" />
   <style>
     :root {
       --bg: #f5f7fb;
@@ -64,15 +64,14 @@
     }
     .brand { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; min-width: 0; }
     .brand-icon {
-      width: 40px; height: 40px; border-radius: 12px;
+      width: 38px; height: 38px; border-radius: 12px;
       display: grid; place-items: center;
       background: white;
-      padding: 2px;
+      overflow: hidden;
       box-shadow: 0 8px 18px rgba(49,92,255,.25);
       flex: 0 0 auto;
-      overflow: hidden;
     }
-    .brand-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+    .brand-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .brand h1 { margin: 0; font-size: 19px; line-height: 1.1; }
     .brand p { margin: 3px 0 0; color: #cbd5e1; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .pills { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; position: relative; z-index: 1; }
@@ -140,6 +139,7 @@
     }
     .input:focus { border-color: #8db2ff; box-shadow: 0 0 0 3px rgba(49, 92, 255, .12); }
     label.inline { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+    .skip-row { margin-top: 6px; padding: 6px 8px; border-radius: 12px; background: var(--warn-bg); border: 1px solid #fed7aa; color: #9a3412; }
     .filter-row { display: flex; gap: 8px; align-items: center; background: var(--soft); border: 1px solid #edf2f7; border-radius: 13px; padding: 6px; }
     .filter-row span { color: var(--muted); font-size: 12px; }
     .connected-box {
@@ -149,7 +149,7 @@
     }
 
     .drop {
-      width: 100%; min-height: 54px;
+      width: 100%; min-height: 70px;
       border: 1px dashed #b8ccff; border-radius: 13px;
       background: #f4f7ff; color: var(--primary);
       display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -169,6 +169,11 @@
 
     .mode { height: 28px; border-radius: 10px; border: 1px solid var(--border); background: white; font-size: 12px; font-weight: 700; cursor: pointer; }
     .mode.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .param-fixed { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-radius: 13px; background: var(--soft); border: 1px solid #edf2f7; padding: 7px 10px; font-size: 12px; color: var(--muted); }
+    .param-fixed b { color: var(--primary); font-size: 15px; margin-left: 4px; }
+    .param-custom { display: none; }
+    .bin-start-row { display: none; }
+    .skip-row { margin-top: 6px; border: 1px solid #fed7aa; background: var(--warn-bg); color: #9a3412; border-radius: 12px; padding: 6px 10px; font-size: 12px; }
     .metric { background: var(--soft); border: 1px solid #edf2f7; border-radius: 13px; padding: 8px 12px; min-height: 70px; }
     .metric .label { color: var(--muted); font-size: 11px; }
     .metric .value { color: var(--primary); font-size: 18px; font-weight: 850; line-height: 1.1; margin-top: 3px; }
@@ -185,9 +190,11 @@
     .step { height: 38px; display: flex; align-items: center; gap: 10px; background: var(--soft); border: 1px solid #edf2f7; border-radius: 13px; padding: 0 12px; margin-top: 6px; }
     .step-index { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: white; border: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 700; }
     .step-title { flex: 1; font-weight: 700; font-size: 12px; }
+    .step-time { min-width: 56px; text-align: right; color: var(--muted); font-family: var(--mono); font-size: 11px; }
     .step-state { color: #94a3b8; font-size: 15px; }
     .step.done .step-state { color: var(--success); }
     .step.running .step-state { color: var(--primary); }
+    .step.skipped .step-state { color: var(--muted); }
     .foreground-note { margin-top: 8px; padding: 6px 11px; border-radius: 12px; background: #eff6ff; border: 1px solid #dbeafe; color: #1d4ed8; font-size: 12px; }
     .actions { background: white; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 8px; }
 
@@ -199,8 +206,6 @@
     .console-count.err { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
     .search-row { display: grid; grid-template-columns: 1fr 34px; gap: 6px; margin-top: 8px; }
     .log-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
-    .log-option { display: flex; align-items: center; gap: 6px; margin-top: 7px; color: var(--muted); font-size: 12px; }
-    .log-option input { margin: 0; }
     .log-window { margin-top: 8px; border: 1px solid var(--border); border-radius: 14px; background: var(--soft); overflow: hidden; }
     .log-head { height: 33px; display: flex; align-items: center; justify-content: space-between; padding: 0 10px; background: white; border-bottom: 1px solid var(--border); font-size: 12px; font-weight: 800; }
     .log-list { height: 300px; overflow: auto; padding: 8px; font-family: var(--mono); font-size: 11px; }
@@ -231,10 +236,10 @@
   <div class="app">
     <header class="topbar">
       <div class="brand">
-        <div class="brand-icon"><img src="designer_zh_logo.jpg" alt="Designer-Z.H logo" /></div>
+        <div class="brand-icon"><img src="logo.jpg" alt="Designer-ZH logo" /></div>
         <div>
           <h1>WCH BLE OTA Web Updater</h1>
-          <p>Professional Web Bluetooth firmware update tool for CH32V208 / WCH BLE devices · Designed By Heng ZHANG (HKU) zhhku@connect.hku.hk</p>
+          <p>Professional Web Bluetooth firmware update tool WCH BLE devices · Designed By Heng ZHANG (HKU) zhhku@connect.hku.hk</p>
         </div>
       </div>
       <div class="pills">
@@ -298,17 +303,18 @@
             <button data-mode="fast" class="mode active">Fast</button>
           </div>
           <div class="spacer"></div>
-          <div class="grid2">
-            <div class="mini-box"><div style="font-size:11px;color:var(--muted)">Packet size</div><b id="packetSizeLabel" style="color:var(--primary);font-size:15px">244 B</b></div>
-            <div class="mini-box"><div style="font-size:11px;color:var(--muted)">Packet delay</div><b id="packetDelayLabel" style="color:var(--primary);font-size:15px">0 ms</b></div>
+          <div id="fixedParamRow" class="param-fixed">
+            <span>Packet size <b id="packetSizeLabel">244 B</b></span>
+            <span>Delay <b id="packetDelayLabel">0 ms</b></span>
           </div>
-          <div class="spacer"></div>
-          <div class="grid2">
-            <div class="filter-row"><span>Custom size</span><input id="customPacketSize" class="input" value="244" inputmode="numeric" /></div>
-            <div class="filter-row"><span>Delay ms</span><input id="customPacketDelay" class="input" value="0" inputmode="numeric" /></div>
+          <div id="customParamRow" class="grid2 param-custom">
+            <div class="filter-row"><span>Size</span><input id="customPacketSize" class="input" value="244" inputmode="numeric" /></div>
+            <div class="filter-row"><span>Delay</span><input id="customPacketDelay" class="input" value="0" inputmode="numeric" /></div>
           </div>
-          <div class="spacer"></div>
-          <div class="filter-row"><span>BIN start</span><input id="binStartAddr" class="input" value="0x00004000" /></div>
+          <div id="binStartRow" class="filter-row bin-start-row"><span>BIN start</span><input id="binStartAddr" class="input" value="0x00004000" /></div>
+          <label class="inline skip-row" title="Skip the VERIFY phase to save time. The IAP/APP will not compare every byte after writing.">
+            <input id="skipVerify" type="checkbox" /> Skip Verify Image (faster)
+          </label>
         </div>
 
       </section>
@@ -348,14 +354,14 @@
 
         <div class="card">
           <div class="card-title"><h2><span class="icon">⚡</span>OTA Progress</h2><span id="stagePill" class="pill gray">Idle</span></div>
-          <div class="progress-top"><span>Total progress</span><b id="progressText">0%</b></div>
+          <div class="progress-top"><span>Total progress</span><b><span id="totalTimeText">--</span> / <span id="progressText">0%</span></b></div>
           <div class="bar"><div id="progressBar"></div></div>
           <div id="stepsBox">
-            <div class="step" data-step="info"><div class="step-index">1</div><div class="step-title">Read Device Info</div><div class="step-state">○</div></div>
-            <div class="step" data-step="erase"><div class="step-index">2</div><div class="step-title">Erase Flash</div><div class="step-state">○</div></div>
-            <div class="step" data-step="program"><div class="step-index">3</div><div class="step-title">Write Firmware</div><div class="step-state">○</div></div>
-            <div class="step" data-step="verify"><div class="step-index">4</div><div class="step-title">Verify Image</div><div class="step-state">○</div></div>
-            <div class="step" data-step="end"><div class="step-index">5</div><div class="step-title">Finish & Reboot</div><div class="step-state">○</div></div>
+            <div class="step" data-step="info"><div class="step-index">1</div><div class="step-title">Read Device Info</div><div class="step-time" data-step-time="info">--</div><div class="step-state">○</div></div>
+            <div class="step" data-step="erase"><div class="step-index">2</div><div class="step-title">Erase Flash</div><div class="step-time" data-step-time="erase">--</div><div class="step-state">○</div></div>
+            <div class="step" data-step="program"><div class="step-index">3</div><div class="step-title">Write Firmware</div><div class="step-time" data-step-time="program">--</div><div class="step-state">○</div></div>
+            <div class="step" data-step="verify"><div class="step-index">4</div><div class="step-title">Verify Image</div><div class="step-time" data-step-time="verify">--</div><div class="step-state">○</div></div>
+            <div class="step" data-step="end"><div class="step-index">5</div><div class="step-title">Finish & Reboot</div><div class="step-time" data-step-time="end">--</div><div class="step-state">○</div></div>
           </div>
           <div class="foreground-note">Keep this page in foreground during OTA.</div>
         </div>
@@ -377,7 +383,6 @@
             <button id="exportLogBtn" class="btn">⇩ Export</button>
             <button id="clearLogBtn" class="btn">⌫ Clear</button>
           </div>
-          <label class="log-option"><input id="logEachPacket" type="checkbox" /> Log every PROGRAM / VERIFY packet</label>
           <div class="log-window">
             <div class="log-head"><span>▣ OTA transaction log</span><span><small>HEX view</small> <span class="pill blue">FEE1</span></span></div>
             <div id="logList" class="log-list"></div>
@@ -421,11 +426,13 @@
       flow: { burst: 12, minBurst: 2, maxBurst: 48, targetBps: 100 * 1024 },
       running: false,
       cancel: false,
+      skipVerify: false,
       pausedLog: false,
-      logEachPacket: false,
       logs: [],
       counts: { INFO: 0, TX: 0, RX: 0, WARN: 0, ERROR: 0 },
       startedAt: 0,
+      timerId: null,
+      stepTimes: {},
     };
 
     function hex(n, width = 8) {
@@ -451,6 +458,45 @@
       return (bytes / 1024).toFixed(1) + " KB";
     }
 
+    function fmtDuration(ms, compact = false) {
+      if (!Number.isFinite(ms) || ms < 0) return "--";
+      if (ms < 1000) return compact ? "<1s" : (ms / 1000).toFixed(1) + "s";
+      const sec = ms / 1000;
+      if (sec < 60) return sec < 10 ? sec.toFixed(1) + "s" : Math.round(sec) + "s";
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+    }
+    function stepElapsed(name) {
+      const t = state.stepTimes[name];
+      if (!t || !t.start) return null;
+      return (t.end || performance.now()) - t.start;
+    }
+    function updateTimerDisplay() {
+      if (els.totalTimeText) {
+        const totalMs = state.startedAt ? (performance.now() - state.startedAt) : NaN;
+        els.totalTimeText.textContent = Number.isFinite(totalMs) ? fmtDuration(totalMs, true) : "--";
+      }
+      ["info", "erase", "program", "verify", "end"].forEach(name => {
+        const el = document.querySelector(`[data-step-time="${name}"]`);
+        if (!el) return;
+        const t = state.stepTimes[name];
+        el.textContent = t?.skipped ? "Skipped" : fmtDuration(stepElapsed(name));
+      });
+    }
+    function startTimerDisplay() {
+      stopTimerDisplay();
+      updateTimerDisplay();
+      state.timerId = setInterval(updateTimerDisplay, 250);
+    }
+    function stopTimerDisplay() {
+      if (state.timerId) {
+        clearInterval(state.timerId);
+        state.timerId = null;
+      }
+      updateTimerDisplay();
+    }
+
     function setPill(el, cls, text) {
       el.className = "pill " + cls;
       el.textContent = text;
@@ -458,14 +504,34 @@
     function setStep(name, status) {
       const el = document.querySelector(`.step[data-step="${name}"]`);
       if (!el) return;
-      el.classList.remove("done", "running");
+      el.classList.remove("done", "running", "skipped");
       const stateEl = el.querySelector(".step-state");
-      if (status === "done") { el.classList.add("done"); stateEl.textContent = "✓"; }
-      else if (status === "running") { el.classList.add("running"); stateEl.textContent = "⌁"; }
-      else { stateEl.textContent = "○"; }
+      const now = performance.now();
+      if (status === "running") {
+        state.stepTimes[name] = { start: now, end: null };
+        el.classList.add("running");
+        stateEl.textContent = "⌁";
+      } else if (status === "done") {
+        const t = state.stepTimes[name] || { start: now, end: null };
+        if (!t.start) t.start = now;
+        t.end = now;
+        state.stepTimes[name] = t;
+        el.classList.add("done");
+        stateEl.textContent = "✓";
+      } else if (status === "skipped") {
+        state.stepTimes[name] = { start: now, end: now, skipped: true };
+        el.classList.add("skipped");
+        stateEl.textContent = "—";
+      } else {
+        delete state.stepTimes[name];
+        stateEl.textContent = "○";
+      }
+      updateTimerDisplay();
     }
     function resetSteps() {
+      state.stepTimes = {};
       ["info", "erase", "program", "verify", "end"].forEach(s => setStep(s, "idle"));
+      if (els.totalTimeText) els.totalTimeText.textContent = "--";
     }
     function setProgress(percent, stage = null) {
       const p = Math.max(0, Math.min(100, Math.round(percent || 0)));
@@ -627,13 +693,6 @@
           throw new Error(`${label} BLE write failed at ${hex(startAddr + offset)} with packet ${state.packetSize} B. Try Custom = 128 B. Original: ${err.message || err}`);
         }
 
-        if (state.logEachPacket) {
-          const payloadLenForLog = Math.max(1, state.packetSize - 4);
-          for (let i = 0; i < packets.length; i++) {
-            log("TX", `${label} packet ${hex(startAddr + offset + i * payloadLenForLog)}:`, packets[i]);
-          }
-        }
-
         offset = tempOffset;
         if (state.packetDelay > 0) await sleep(state.packetDelay);
 
@@ -792,6 +851,10 @@
     }
 
     function updateFirmwareUi() {
+      if (els.binStartRow) {
+        const isBin = !!state.firmwareFile && state.firmwareFile.name.toLowerCase().endsWith(".bin");
+        els.binStartRow.style.display = isBin ? "flex" : "none";
+      }
       const fw = state.firmware;
       if (!fw) {
         els.fileInfo.innerHTML = `<div class="file-name">No firmware selected</div><div class="kv-grid"><div>Size: --</div><div>Type: --</div><div>Start: --</div><div>End: --</div></div>`;
@@ -808,7 +871,7 @@
       els.faSize.textContent = fmtSize(fw.size);
       els.faBlocks.textContent = blocks || "--";
       els.teWrite.textContent = packets.toLocaleString();
-      els.teVerify.textContent = packets.toLocaleString();
+      els.teVerify.textContent = (state.skipVerify || els.skipVerify?.checked) ? "Skipped" : packets.toLocaleString();
       els.teAddr.textContent = hex(fw.startAddress);
       if (fw.startAddress === 0x4000) {
         els.firmwareCheck.className = "ok-box";
@@ -910,6 +973,7 @@
       state.startedAt = performance.now();
       updateButtons();
       resetSteps();
+      startTimerDisplay();
       setProgress(0, "Starting");
       try {
         if (!state.firmware) await parseSelectedFile();
@@ -935,14 +999,20 @@
         setStep("program", "done");
         log("INFO", "Program completed.");
 
-        setStep("verify", "running");
-        setProgress(68, "Verifying image");
-        await transmitImagePhase(CMD_VERIFY, "VERIFY", startAddr, fw, 68, 27);
-        await sleep(1000);
-        const verifyRes = await readBytes("VERIFY final response");
-        if (!verifyRes.length || verifyRes[0] !== 0x00) throw new Error(`Verify failed. Response: ${bytesToHex(verifyRes)}`);
-        setStep("verify", "done");
-        log("INFO", "Verify completed.");
+        if (state.skipVerify || els.skipVerify.checked) {
+          setStep("verify", "skipped");
+          setProgress(95, "Finishing");
+          log("WARN", "Verify Image skipped by user. This is faster, but byte-by-byte post-write verification is not performed.");
+        } else {
+          setStep("verify", "running");
+          setProgress(68, "Verifying image");
+          await transmitImagePhase(CMD_VERIFY, "VERIFY", startAddr, fw, 68, 27);
+          await sleep(1000);
+          const verifyRes = await readBytes("VERIFY final response");
+          if (!verifyRes.length || verifyRes[0] !== 0x00) throw new Error(`Verify failed. Response: ${bytesToHex(verifyRes)}`);
+          setStep("verify", "done");
+          log("INFO", "Verify completed.");
+        }
 
         setStep("end", "running");
         setProgress(98, "Finishing");
@@ -955,6 +1025,7 @@
         log("ERROR", err.message || String(err));
       } finally {
         state.running = false;
+        stopTimerDisplay();
         updateButtons();
       }
     }
@@ -983,6 +1054,10 @@
       }
       els.packetSizeLabel.textContent = state.packetSize + " B";
       els.packetDelayLabel.textContent = state.packetDelay + " ms";
+      if (els.fixedParamRow && els.customParamRow) {
+        els.fixedParamRow.style.display = mode === "custom" ? "none" : "flex";
+        els.customParamRow.style.display = mode === "custom" ? "grid" : "none";
+      }
       updateFirmwareUi();
     }
 
@@ -1021,6 +1096,11 @@
         });
       });
       els.binStartAddr.addEventListener("change", () => { if (state.firmwareFile?.name.toLowerCase().endsWith(".bin")) state.firmware = null; });
+      els.skipVerify.addEventListener("change", () => {
+        state.skipVerify = els.skipVerify.checked;
+        updateFirmwareUi();
+        log(els.skipVerify.checked ? "WARN" : "INFO", els.skipVerify.checked ? "Verify Image will be skipped in the next OTA run." : "Verify Image enabled for the next OTA run.");
+      });
       els.logSearch.addEventListener("input", filterLog);
       els.clearLogBtn.addEventListener("click", () => { state.logs = []; state.counts = { INFO: 0, TX: 0, RX: 0, WARN: 0, ERROR: 0 }; els.logList.innerHTML = ""; updateCounts(); });
       els.pauseLogBtn.addEventListener("click", () => { state.pausedLog = !state.pausedLog; els.pauseLogBtn.textContent = state.pausedLog ? "▶ Resume" : "Ⅱ Pause"; if (!state.pausedLog) renderAllLogs(); });
@@ -1032,10 +1112,6 @@
         a.download = `ch32_ota_log_${new Date().toISOString().replace(/[:.]/g, "-")}.txt`;
         a.click();
         URL.revokeObjectURL(a.href);
-      });
-      els.logEachPacket.addEventListener("change", () => {
-        state.logEachPacket = els.logEachPacket.checked;
-        log("INFO", state.logEachPacket ? "Per-packet PROGRAM / VERIFY logging enabled. This may slow OTA." : "Per-packet PROGRAM / VERIFY logging disabled.");
       });
       els.allBle.addEventListener("change", () => { if (els.allBle.checked) els.otaOnly.checked = false; });
       els.otaOnly.addEventListener("change", () => { if (els.otaOnly.checked) els.allBle.checked = false; });
@@ -1051,6 +1127,7 @@
       setProgress(0, "Idle");
       setupEvents();
       updateCounts();
+      state.skipVerify = !!els.skipVerify.checked;
       updateButtons();
       applyMode("fast");
       log("INFO", ok ? "Web Bluetooth is available. Chrome / Edge is recommended." : "Web Bluetooth is not available. Use Chrome / Edge on HTTPS or localhost.");

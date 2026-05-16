@@ -1,5 +1,4 @@
 # CH32 BLE OTA Web Updater - FAST244 Flow Control
-https://zhanghengee.github.io/WCH_BLE_OTA/
 
 ## How to run
 
@@ -49,9 +48,31 @@ If still unstable:
 
 Web Bluetooth cannot force MTU like Android `requestMtu()`. This version attempts to send 244-byte packets. Whether it reaches 100 KB/s depends on browser, OS Bluetooth stack, adapter, and device firmware.
 
+## Timing display update
 
-## v1.1 branding and logging updates
+This version only adds timing display to the existing OTA progress UI:
 
-- Added Designer-Z.H logo as the browser tab favicon and top-left web logo.
-- Header subtitle now includes: Designed By Heng ZHANG (HKU).
-- Added an optional checkbox: Log every PROGRAM / VERIFY packet. It is disabled by default to avoid slowing OTA transfer.
+- Total elapsed time is displayed before the total percentage.
+- Each OTA step displays its elapsed time before the status mark.
+- The transfer logic, packet format, flow control, BLE scan logic, and OTA commands are unchanged.
+
+## Optional Skip Verify
+
+A new checkbox is available in **3. OTA Parameters**:
+
+- **Skip Verify Image (faster)**
+
+When unchecked, the tool keeps the original behavior: it sends the VERIFY phase after PROGRAM and waits for the final verify response.
+
+When checked, the tool skips the VERIFY phase and sends END directly after PROGRAM. This saves time, but the firmware is not byte-by-byte verified after writing. Use it only after the OTA path has already been tested as stable.
+
+## UI update in this version
+
+- Added the Designer-ZH logo to the top-left header.
+- Added the same logo as the browser tab favicon.
+- Added the credit line: Designed By Heng ZHANG (HKU).
+- Compressed the left OTA Parameters panel:
+  - Fast and Standard show fixed packet settings only.
+  - Custom mode shows editable packet size and delay fields.
+  - BIN start address is shown only for BIN files.
+- Increased the firmware drop area height for easier drag-and-drop.
